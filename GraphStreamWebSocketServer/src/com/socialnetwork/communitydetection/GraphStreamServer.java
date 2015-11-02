@@ -13,6 +13,8 @@ import org.java_websocket.framing.Framedata;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
+import com.socialnetwork.communitydetection.louvainMethod.LouvainAlgorithm;
+
 public class GraphStreamServer extends WebSocketServer {
 	
 	GraphStreamServer( int port ) throws UnknownHostException {

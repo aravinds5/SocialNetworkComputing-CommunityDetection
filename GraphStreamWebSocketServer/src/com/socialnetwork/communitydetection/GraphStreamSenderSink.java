@@ -11,7 +11,7 @@ public class GraphStreamSenderSink implements Sink {
 	private WebSocket socketConnection;
 	
 	
-	GraphStreamSenderSink( WebSocket conn ) {
+	public GraphStreamSenderSink( WebSocket conn ) {
 		socketConnection = conn;
 	}
 	

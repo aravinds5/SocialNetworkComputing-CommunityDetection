@@ -1,15 +1,17 @@
-package com.socialnetwork.communitydetection;
+package com.socialnetwork.communitydetection.louvainMethod;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.implementations.SingleGraph;
 import org.java_websocket.WebSocket;
 import org.json.*;
 
+import com.socialnetwork.communitydetection.GraphStreamSenderSink;
+
 public class LouvainAlgorithm {
 	
-	static GraphStreamSenderSink sink;
+	GraphStreamSenderSink sink;
 	
 	
-	LouvainAlgorithm( WebSocket conn) {
+	public LouvainAlgorithm( WebSocket conn) {
 		
 		sink = new GraphStreamSenderSink( conn );
 		
