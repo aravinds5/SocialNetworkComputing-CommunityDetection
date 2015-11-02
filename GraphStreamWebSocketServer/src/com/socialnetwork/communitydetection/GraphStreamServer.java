@@ -45,7 +45,13 @@ public class GraphStreamServer extends WebSocketServer {
 	
 	@Override
 	public void onOpen( WebSocket conn, ClientHandshake handshake ) {
-		// TODO Auto-generated method stub
+		
+		System.out.println( "Opened connection");
+		
+		LouvainAlgorithm la = new LouvainAlgorithm(conn);
+		
+		la.SimpleAlgorithm();
+		
 		
 	}
 	

@@ -1,0 +1,17 @@
+<html>
+<head>
+<title>Community Detection</title>
+</head>
+<body> <h1> Welcome to my page </h1></body>
+<script type="text/javascript"> 
+var socket = new WebSocket('ws://localhost:8887');
+
+socket.onopen = function(){
+	console.log("Connection established, handle with function");
+};
+
+socket.onmessage = function(evt){
+	document.write(evt.data);
+  }
+</script>
+</html>
