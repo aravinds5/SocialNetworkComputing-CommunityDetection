@@ -13,13 +13,14 @@ import org.java_websocket.framing.Framedata;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
-import com.socialnetwork.communitydetection.louvainMethod.LouvainAlgorithm;
-
 public class GraphStreamServer extends WebSocketServer {
 	
-	GraphStreamServer( int port ) throws UnknownHostException {
+	private String inputFile;
+	
+	GraphStreamServer( int port, String file ) throws UnknownHostException {
 		
 		super ( new InetSocketAddress( port ) );
+		inputFile = file;
 		
 	}
 	
@@ -49,37 +50,16 @@ public class GraphStreamServer extends WebSocketServer {
 	public void onOpen( WebSocket conn, ClientHandshake handshake ) {
 		
 		System.out.println( "Opened connection");
-		
-		LouvainAlgorithm la = new LouvainAlgorithm(conn);
-		
+		LouvainAlgorithm la = new LouvainAlgorithm(conn,inputFile);
 		la.SimpleAlgorithm();
-		
 		
 	}
 	
 	public static void main( String[] args ) throws InterruptedException , IOException {
 		WebSocketImpl.DEBUG = true;
 		int port = 8887; // 843 flash policy port
-		try {
-			port = Integer.parseInt( args[ 0 ] );
-		} catch ( Exception ex ) {
-		}
-		GraphStreamServer s = new GraphStreamServer( port );
+		GraphStreamServer s = new GraphStreamServer( port, args[0] );
 		s.start();
 		System.out.println( "GraphStreamServer started on port: " + s.getPort() );
-
-		BufferedReader sysin = new BufferedReader( new InputStreamReader( System.in ) );
-		while ( true ) {
-			String in = sysin.readLine();
-			if( in.equals( "exit" ) ) {
-				s.stop();
-				break;
-			} else if( in.equals( "restart" ) ) {
-				s.stop();
-				s.start();
-				break;
-			}
 		}
 	}
-
-}

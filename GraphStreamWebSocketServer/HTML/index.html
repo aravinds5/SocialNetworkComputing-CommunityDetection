@@ -1,17 +1,124 @@
 <html>
 <head>
 <title>Community Detection</title>
+<style>
+rect {
+  fill: none;
+  pointer-events: all;
+}
+.node {
+  fill: #000;
+}
+.cursor {
+  fill: none;
+  stroke: brown;
+  pointer-events: none;
+}
+.link {
+  stroke: #999;
+}
+</style>
 </head>
-<body> <h1> Welcome to my page </h1></body>
-<script type="text/javascript"> 
-var socket = new WebSocket('ws://localhost:8887');
+<body>
+<h1> Welcome to my page </h1>
+<script src='d3/d3.min.js'></script>
+<script>
 
+var width = 960,
+    height = 700;
+
+var color = d3.scale.category10();
+
+var nodes = [],
+    links = [];
+
+var force = d3.layout.force()
+    .nodes(nodes)
+    .links(links)
+    .charge(-400)
+    .linkDistance(120)
+    .size([width, height])
+    .on("tick", tick);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var node = svg.selectAll(".node"),
+    link = svg.selectAll(".link");
+
+function tick() {
+  node.attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; })
+
+  link.attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+}
+
+ // Add and remove elements on the graph object
+  function addNode(id) {
+        nodes.push({"id":id});
+        start();
+    }
+
+   function addEdge(sourceId,targetId) {
+
+   	var sourceNode = findNode(sourceId);
+        var targetNode = findNode(targetId);
+
+        if((sourceNode !== undefined) && (targetNode !== undefined)) {
+            links.push({"source": sourceNode, "target": targetNode});
+            start();
+        }
+    }
+
+   var findNode = function (id) {
+        for (var i=0; i < nodes.length; i++) {
+            if (nodes[i].id === id)
+                return nodes[i]
+        };
+    }
+function start() {
+
+  var drag = force.drag().on("dragstart", dragstart);
+  link = link.data(force.links(), function(d) { return d.source.id + "-" + d.target.id; });
+  link.enter().insert("line", ".node").attr("class", "link");
+  link.exit().remove();
+
+  node = node.data(force.nodes(), function(d) { return d.id;});
+  node.enter().append("circle").attr("class", function(d) { return "node " + d.id; }).attr("r", 8).call(drag);
+  node.exit().remove();
+
+  force.start();
+}
+
+function dragstart(d) {
+  d3.select(this).classed("fixed", d.fixed = true);
+}
+
+
+var socket = new WebSocket('ws://localhost:8887');
 socket.onopen = function(){
 	console.log("Connection established, handle with function");
 };
 
 socket.onmessage = function(evt){
-	document.write(evt.data);
+	//document.write(evt.data);
+	var obj = JSON.parse(evt.data);
+	//document.write(obj.operation);
+	//document.write("<br>");
+
+	if(obj.operation == "nodeAdded")
+	{
+		addNode( obj.nodeId );
+	}
+	if(obj.operation == "edgeAdded")
+	{
+		addEdge(obj.fromNodeId,obj.toNodeId);
+	}
   }
 </script>
+</body>
 </html>
