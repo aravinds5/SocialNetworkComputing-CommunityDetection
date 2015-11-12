@@ -1,0 +1,93 @@
+<html>
+<head>
+<style type="text/css">
+  #container {
+    max-width: 400px;
+    height: 400px;
+    margin: auto;
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <style>
+    #graph-container {
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      position: absolute;
+    }
+  </style>
+  <div id="graph-container"></div>
+</div>
+<script src='sigma.min.js'></script>
+<script>
+/**
+ * This is a basic example on how to instantiate sigma. A random graph is"
+ * generated a"nd stored in the "graph" variable, and then sigma is instantiated
+ * directly with the graph.
+ *
+ * The simple instance of sigma is enough to make it render the graph on the on
+ * the screen, since the graph is given directly to the constructor.
+ */
+var s,
+    g = {
+      nodes: [],
+      edges: []
+    };
+
+ function addNode(nodeId) {
+    s.graph.addNode({
+    id: nodeId,
+    label: 'Node ' + nodeId,
+    x: Math.random(),
+    y: Math.random(),
+    size: Math.random(),
+    color: '#666'
+  });
+    s.refresh()
+}
+
+function addEdge(edgeId,sourceId,targetId) {
+    s.graph.addEdge({
+    id: edgeId,
+    source: sourceId,
+    target: targetId,
+    size: Math.random(),
+    color: '#ccc'
+  });
+    s.refresh()
+}
+
+
+
+// Instantiate sigma:
+s = new sigma({
+  graph: g,
+  container: 'graph-container'
+});
+
+var socket = new WebSocket('ws://localhost:8887');
+socket.onopen = function(){
+  console.log("Connection established, handle with function");
+};
+
+socket.onmessage = function(evt){
+  //document.write(evt.data);
+  var obj = JSON.parse(evt.data);
+  //document.write(obj.operation);
+  //document.write("<br>");
+
+  if(obj.operation == "nodeAdded")
+  {
+    addNode( obj.nodeId );
+  }
+  if(obj.operation == "edgeAdded")
+  {
+    addEdge(obj.edgeId,obj.fromNodeId,obj.toNodeId);
+  }
+  }
+</script>
+</body>
+</html>

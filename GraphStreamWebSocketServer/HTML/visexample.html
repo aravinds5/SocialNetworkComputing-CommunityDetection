@@ -1,0 +1,104 @@
+<html>
+<head>
+    <script type="text/javascript" src="bower_components/vis/dist/vis.js"></script>
+    <link href="bower_components/vis/dist/vis.css" rel="stylesheet" type="text/css" />
+
+    <style type="text/css">
+        #mynetwork {
+            width: 1900px;
+            height: 1080px;
+            border: 1px solid lightgray;
+        }
+    </style>
+</head>
+<body>
+<div id="mynetwork"></div>
+
+<script type="text/javascript">
+var nodes, edges, network;
+
+        function addNode(nodeId) {
+            try {
+                nodes.add({
+                    id: nodeId,
+                    label: nodeId
+                });
+            }
+            catch (err) {
+                alert(err);
+            }
+        }
+
+        function addEdge(edgeId,sourceId,destinationId) {
+            try {
+                edges.add({
+                    id: edgeId,
+                    from: sourceId,
+                    to: destinationId
+                });
+            }
+            catch (err) {
+                alert(err);
+            }
+        }
+
+         function removeEdge(edgeId) {
+            try {
+                edges.remove({id: edgeId});
+            }
+            catch (err) {
+                alert(err);
+            }
+        }
+
+            // create an array with nodes
+            nodes = new vis.DataSet();
+            nodes.add([]);
+
+            // create an array with edges
+            edges = new vis.DataSet();
+            edges.add([]);
+
+            // create a network
+            var container = document.getElementById('mynetwork');
+            var data = {
+                nodes: nodes,
+                edges: edges
+            };
+            network = new vis.Network(container, data, options);
+
+            var options = {
+  physics:{
+    enabled: false
+  }
+}
+network.setOptions(options);
+
+    var socket = new WebSocket('ws://localhost:8887');
+    socket.onopen = function(){
+    console.log("Connection established, handle with function");
+    };
+
+    socket.onmessage = function(evt){
+    //document.write(evt.data);
+    var obj = JSON.parse(evt.data);
+    //document.write(obj.operation);
+    //document.write("<br>");
+
+    if(obj.operation == "nodeAdded")
+    {
+        addNode( obj.nodeId );
+    }
+    if(obj.operation == "edgeAdded")
+    {
+        addEdge(obj.edgeId,obj.fromNodeId,obj.toNodeId);
+    }
+
+    if(obj.operation == "edgeRemoved")
+    {
+        removeEdge(obj.edgeId);
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "name": "w3sink",
+  "version": "0.0.1",
+  "homepage": "https://github.com/graphstream/w3sink",
+  "authors": [
+    "Guilhelm Savin <gsavin@nomadogeeks.org>",
+    "Serge Delye <serge.delye@univ-lehavre.fr>",
+    "Yoann Pigné <yoann.pigne@gmail.com>"
+  ],
+  "description": "a web interface for GraphStream",
+  "main": "dist/w3sink.js",
+  "keywords": [
+    "graphstream",
+    "graph visualisation"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "node_modules",
+    "bower_components",
+    "test",
+    "demos",
+    "lib",
+    "Gruntfile.js",
+    "package.json"
+  ],
+  "devDependencies": {
+    "qunit": "~1.14.0",
+    "jquery": "~2.1.0",
+    "d3": "~3.4.3"
+  },
+  "_release": "0.0.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "v0.0.1",
+    "commit": "e5f66f1ad5b69c1f2b0b6781ce9039485300278f"
+  },
+  "_source": "git://github.com/graphstream/w3sink.git",
+  "_target": "~0.0.1",
+  "_originalSource": "w3sink",
+  "_direct": true
+}

@@ -10,6 +10,7 @@ import java.util.Iterator;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
+import org.graphstream.graph.implementations.MultiGraph;
 import org.graphstream.graph.implementations.SingleGraph;
 import org.graphstream.stream.Sink;
 
@@ -20,18 +21,13 @@ public class Network implements Serializable {
 	private GraphStreamSenderSink senderSink;
 	private Graph graph;
 	
-	/*
-	 * Generates a random graph of 100 nodes with number of edges between 
-	 * 99 to 10000 edges
-	 */
 	public Network( GraphStreamSenderSink sink ){
 		senderSink = sink;
 	}
 	
-	
+	// Construct a graph from reading a file from filesystem
 	public void ConstructGraph( String file ) throws IOException{
-		graph = new SingleGraph("firstGraph");
-		
+		graph = new MultiGraph("communities");
 		graph.addSink(senderSink);
 		
 		BufferedReader bufferedReader;
@@ -62,34 +58,44 @@ public class Network implements Serializable {
             	graph.addNode(splittedLine[1]);
             }
             
-           Double edgeWeight = (splittedLine.length > 2) ? Double.parseDouble(splittedLine[2]) : 1;
+           Double edgeWeight = (splittedLine.length > 2) ? Double.parseDouble(splittedLine[2]) : 1.0;
            
-           graph.addEdge(j.toString( ), splittedLine[0], splittedLine[1]);
+           graph.addEdge(j.toString( ), splittedLine[0], splittedLine[1],true);
            graph.getEdge(j).addAttribute("weight", edgeWeight);
+           
            line = bufferedReader.readLine();
            j++;
         }
         bufferedReader.close();
-        
-        System.out.println(" Number of nodes :" + graph.getNodeCount() );
-        System.out.println(" Number of edges :" + graph.getEdgeCount() );
 	}
 	
+	// Get the graph
+	public Graph getGraph( ) {	
+		return this.graph;
+	}
 	
+	// Get Neighbor list of a node
 	public Iterator<Node> getNeighborList( final String nodeId ) {
 		return graph.getNode(nodeId).getNeighborNodeIterator( );
 	}
 	
+	//Get number of neighbors for a given node
+	public int getNumNeighbors( String nodeId ) {
+		return graph.getNode(nodeId).getDegree();
+	}
 	
-	public int getNumNodes( ) {
-		
+	// Get the weight of the edge between node1Id and node2Id
+	public double getEdgeWeight( String node1Id , String node2Id ) {
+		return graph.getNode(node1Id).getEdgeBetween(node2Id).getAttribute("weight");
+	}
+	
+	// Get total number of nodes in graph
+	public int getNumNodes( ) {	
 		return graph.getNodeCount();
 	}
 	
+	// Get total number of edges in graph
 	public int getNumEdges( ) {
-		
 		return graph.getEdgeCount();
 	}
-	
-
 }

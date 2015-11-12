@@ -50,9 +50,11 @@ public class GraphStreamServer extends WebSocketServer {
 	public void onOpen( WebSocket conn, ClientHandshake handshake ) {
 		
 		System.out.println( "Opened connection");
-		LouvainAlgorithm la = new LouvainAlgorithm(conn,inputFile);
-		la.SimpleAlgorithm();
+		//LouvainAlgorithm la = new LouvainAlgorithm(conn,inputFile);
+	   // la.runAlgorithm();
 		
+		GirvanNewmanAlgorithm gn = new GirvanNewmanAlgorithm( conn, inputFile );
+		//gn.runAlgorithm(6);
 	}
 	
 	public static void main( String[] args ) throws InterruptedException , IOException {

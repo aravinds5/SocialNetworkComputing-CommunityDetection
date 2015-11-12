@@ -1,0 +1,201 @@
+<html>
+<head>
+<title>Community Detection</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<meta name="author" content="">
+
+    <!-- Le styles -->
+  <link href="bootstrap/css/bootstrap.css" rel="stylesheet">
+  <link href="bootstrap/css/bootstrap-responsive.css" rel="stylesheet">
+<!--style>
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+</style-->
+<style>
+rect {
+  fill: none;
+  pointer-events: all;
+}
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+.node text {
+  pointer-events: none;
+  font: 10px sans-serif;
+}
+.cursor {
+  fill: none;
+  stroke: brown;
+  pointer-events: none;
+}
+.link {
+  stroke: #999;
+}
+</style>
+</head>
+<body>
+      <!--Navigation Bar -->
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">Graph Visualization</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#about">About</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div> 
+<!--h1> Welcome to my page </h1-->
+<script src='d3/d3.min.js'></script>
+<script>
+
+var width = 1900,
+    height = 1080;
+
+var color = d3.scale.category10();
+
+var nodes = [],
+    links = [];
+
+var force = d3.layout.force()
+    .nodes(nodes)
+    .links(links)
+    .charge(-100)
+    .gravity(0.1)
+    .linkDistance(100)
+    .size([width, height])
+    .on("tick", tick);
+
+var svg = d3.select("body").append("svg").attr("width", width).attr("height", height);
+
+
+var node = svg.selectAll(".node"),
+    link = svg.selectAll(".link");
+
+
+function tick() {
+
+ node.attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; })
+
+  link.attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+}
+
+ // Add and remove elements on the graph object
+  function addNode(id) {
+        nodes.push({"name":id, "id":id});
+        start();
+    }
+
+   function addEdge(edgeId,sourceId,targetId) {
+
+   	var sourceNode = findNode(sourceId);
+        var targetNode = findNode(targetId);
+
+        if((sourceNode !== undefined) && (targetNode !== undefined)) {
+            links.push({"edgeId":edgeId, "source": sourceNode, "target": targetNode});
+            start();
+        }
+    }
+
+    function removeEdge(edgeId) {
+       for (var i = 0; i < links.length; i++) {
+                if (links[i].edgeId == edgeId) {
+                    links.splice(i, 1);
+                    break;
+                }
+        }
+        start();
+       }
+
+   var findNode = function (id) {
+        for (var i=0; i < nodes.length; i++) {
+            if (nodes[i].id === id)
+                return nodes[i]
+        };
+    }
+function start() {
+
+  var drag = force.drag().origin(function(d) { return d; }).on("dragstart", dragstarted).on("drag", dragged).on("dragend", dragended);
+  link = link.data(force.links(), function(d) { return d.source.id + "-" + d.target.id; });
+  link.enter().insert("line", ".node").attr("class", "link");
+  link.exit().remove();
+
+
+  node = node.data(force.nodes(), function(d) { return d.id;});
+  node.enter().append("g.circle").attr("class", function(d) { return "node " + d.id; }).attr("r",5).call(drag);
+
+   node.append("g.text")
+      .attr("dx", 12)
+      .attr("dy", ".35em")
+      .style("fill", "black")
+      .text(function(d) { return d.name });
+  node.exit().remove();
+
+  force.start();
+}
+
+function dragstarted(d) {
+   d3.event.sourceEvent.stopPropagation();
+   d3.select(this).classed("dragging", true);
+}
+
+function dragged(d) {
+   d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
+}
+
+function dragended(d) {
+   d3.select(this).classed("dragging", false);
+}
+
+var socket = new WebSocket('ws://localhost:8887');
+socket.onopen = function(){
+	console.log("Connection established, handle with function");
+};
+
+socket.onmessage = function(evt){
+	//document.write(evt.data);
+	var obj = JSON.parse(evt.data);
+	//document.write(obj.operation);
+	//document.write("<br>");
+
+	if(obj.operation == "nodeAdded")
+	{
+		addNode( obj.nodeId );
+	}
+	if(obj.operation == "edgeAdded")
+	{
+		addEdge(obj.edgeId,obj.fromNodeId,obj.toNodeId);
+	}
+
+  if(obj.operation == "edgeRemoved")
+  {
+    removeEdge(obj.edgeId);
+  }
+  }
+</script>
+</body>
+</html>
