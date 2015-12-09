@@ -12,11 +12,12 @@
     </style>
 </head>
 <body>
+<button id="button1" type="button" onclick="startStop()">Stop</button>
 <div id="mynetwork"></div>
 
 <script type="text/javascript">
-var nodes, edges, network;
 
+var nodes, edges, network;
         function addNode(nodeId) {
             try {
                 nodes.add({
@@ -51,6 +52,26 @@ var nodes, edges, network;
             }
         }
 
+        function clearGraph( ) {
+            nodes.clear( );
+            edges.clear( );
+        }
+
+        function startStop( ) {
+
+            var el = document.getElementById("button1");
+            if (el.firstChild.data == "Stop") 
+            {
+                 el.firstChild.data = "Start";
+                 socket.send("stop");
+            }
+            else 
+            {
+            el.firstChild.data = "Stop"; 
+            socket.send("start");
+            }
+        }
+
             // create an array with nodes
             nodes = new vis.DataSet();
             nodes.add([]);
@@ -65,14 +86,8 @@ var nodes, edges, network;
                 nodes: nodes,
                 edges: edges
             };
+            var options = {};
             network = new vis.Network(container, data, options);
-
-            var options = {
-  physics:{
-    enabled: false
-  }
-}
-network.setOptions(options);
 
     var socket = new WebSocket('ws://localhost:8887');
     socket.onopen = function(){
@@ -80,10 +95,8 @@ network.setOptions(options);
     };
 
     socket.onmessage = function(evt){
-    //document.write(evt.data);
+      
     var obj = JSON.parse(evt.data);
-    //document.write(obj.operation);
-    //document.write("<br>");
 
     if(obj.operation == "nodeAdded")
     {
@@ -97,6 +110,14 @@ network.setOptions(options);
     if(obj.operation == "edgeRemoved")
     {
         removeEdge(obj.edgeId);
+    }
+
+    if(obj.operation == "graphAttributeChanged")
+    {
+        if(obj.AlgorithmEvent == "graphCleared")
+        {
+            clearGraph( );
+        }
     }
   }
 </script>

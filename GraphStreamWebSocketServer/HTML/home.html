@@ -37,36 +37,51 @@ var s,
       edges: []
     };
 
- function addNode(nodeId) {
-    s.graph.addNode({
-    id: nodeId,
-    label: 'Node ' + nodeId,
-    x: Math.random(),
-    y: Math.random(),
-    size: Math.random(),
-    color: '#666'
-  });
-    s.refresh()
+function addNode(nodeId) {
+
+  transactions = db.transaction(["Node1"], "readwrite");
+  var objectStore = transactions.objectStore("Node");
+  objectStore.add({nodeId: nodeId});
+
 }
 
 function addEdge(edgeId,sourceId,targetId) {
-    s.graph.addEdge({
-    id: edgeId,
-    source: sourceId,
-    target: targetId,
-    size: Math.random(),
-    color: '#ccc'
-  });
-    s.refresh()
+
+  transaction = db.transaction(["Relation"],"readwrite");
+  var objectStore2 = transaction.objectStore("Relation");
+  objectStore2.add([{edgeId: edgeId,sourceId: sourceId,targetId: targetId}]);
+
 }
-
-
 
 // Instantiate sigma:
 s = new sigma({
   graph: g,
   container: 'graph-container'
 });
+
+
+const dbName = "the_name1";
+var db;
+var transaction;
+var request = indexedDB.open(dbName, 2);
+request.onerror = function(event) {
+  alert("Why didn't you allow my web app to use IndexedDB?!");
+};
+request.onsuccess = function(event) {
+  db = event.target.result;
+};
+
+request.onerror = function(event) {
+  // Handle errors.
+};
+request.onupgradeneeded = function(event) {
+  var db = event.target.result;
+
+  alert("Success");
+
+  var objectStore = db.createObjectStore("Node1", { keyPath: "nodeId" });
+  objectStore.createIndex("nodeId", "nodeId", { unique: false });
+};
 
 var socket = new WebSocket('ws://localhost:8887');
 socket.onopen = function(){
@@ -85,7 +100,7 @@ socket.onmessage = function(evt){
   }
   if(obj.operation == "edgeAdded")
   {
-    addEdge(obj.edgeId,obj.fromNodeId,obj.toNodeId);
+    //addEdge(obj.edgeId,obj.fromNodeId,obj.toNodeId);
   }
   }
 </script>

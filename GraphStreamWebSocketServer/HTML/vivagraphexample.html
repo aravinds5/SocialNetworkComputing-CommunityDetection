@@ -1,0 +1,80 @@
+<html>
+<head>
+</head>
+<body>
+<button id="button1" type="button" onclick="startStop()">Stop</button>
+<div id="mynetwork"></div>
+<script src="../bower_components/vivagraph/VivaGraphJS-master/dist/vivagraph.js"></script>
+<script type="text/javascript">
+        function addNode(nodeId) {
+            graph.addNode(nodeId);
+        }
+
+        function addEdge(edgeId,sourceId,destinationId) {
+            graph.addLink(sourceId,destinationId);
+        }
+
+         function removeEdge(edgeId) {
+        }
+
+        function clearGraph( ) {
+        }
+
+        function startStop( ) {
+
+            var el = document.getElementById("button1");
+            if (el.firstChild.data == "Stop") 
+            {
+                 el.firstChild.data = "Start";
+                 socket.send("stop");
+            }
+            else 
+            {
+            el.firstChild.data = "Stop"; 
+            socket.send("start");
+            }
+        }
+
+    var graph = Viva.Graph.graph();
+    var graphics = Viva.Graph.View.webglGraphics();
+    var renderer = Viva.Graph.View.renderer(graph,
+    {
+        graphics : graphics
+        container  : document.getElementById('mynetwork')
+    });
+    renderer.run();
+
+    var socket = new WebSocket('ws://localhost:8887');
+    socket.onopen = function(){
+    console.log("Connection established, handle with function");
+    };
+
+    socket.onmessage = function(evt){
+      
+    var obj = JSON.parse(evt.data);
+
+    if(obj.operation == "nodeAdded")
+    {
+        addNode( obj.nodeId );
+    }
+    if(obj.operation == "edgeAdded")
+    {
+        addEdge(obj.edgeId,obj.fromNodeId,obj.toNodeId);
+    }
+
+    if(obj.operation == "edgeRemoved")
+    {
+        removeEdge(obj.edgeId);
+    }
+
+    if(obj.operation == "graphAttributeChanged")
+    {
+        if(obj.AlgorithmEvent == "graphCleared")
+        {
+            clearGraph( );
+        }
+    }
+  }
+</script>
+</body>
+</html>

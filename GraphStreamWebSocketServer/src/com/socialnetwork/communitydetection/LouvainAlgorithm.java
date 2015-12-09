@@ -11,7 +11,6 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
@@ -29,21 +28,20 @@ import org.json.*;
 import org.graphstream.algorithm.Toolkit;
 
 /*
- * Credits: https://github.com/csdashes/GraphStreamCommunityDetection
+ * Adopted From: https://github.com/csdashes/GraphStreamCommunityDetection
  * 
  */
-
-
-
 public class LouvainAlgorithm {
 	
 	private GraphStreamSenderSink sink;
 	
 	private String inputFile;
 	
-	private Network inputNetwork;
+	private Graph gp;
 	
-	private Network finalNetwork;
+	private double totalEdgeWeight;
+	
+	private Graph finalNetwork;
 	
 	private Modularity modularity;
 	
@@ -54,13 +52,8 @@ public class LouvainAlgorithm {
 	private Iterator<Node> neighbors;
 	
     private Random color;
-    private int r, g, b;
+    private int r, gr, b;
     
-    private SpriteManager sm;
-    private Sprite communitiesCount,
-            modularityCount,
-            nmiCount;
-	
 	private int step;
 	
 	private NormalizedMutualInformation nminfo;
@@ -73,40 +66,44 @@ public class LouvainAlgorithm {
 		sink = new GraphStreamSenderSink( conn );
 		inputFile = file;
 		
-		inputNetwork = new Network(sink);
 		try {
-			inputNetwork.ConstructGraph(inputFile);
+			gp = Network.ConstructGraph(file,sink);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		globalMaxQ = -0.5;
+		totalEdgeWeight = getTotalEdgeWeight( gp );
+		System.out.println("Total Edge weight : " + totalEdgeWeight);
 	}
 	
 	public void runAlgorithm( ) {
 		
 		initialize( );
-		globalNewQ = optimizeModularity(inputNetwork);
-        
-		System.out.println("Modularity : " + globalNewQ);
 		
-		finalNetwork = inputNetwork;
-       
+		globalNewQ = optimizeModularity(this.gp);
+		
+		this.gp.changeAttribute("globalNewQ", globalNewQ);
+		
+		finalNetwork = this.gp;
+
         while (globalNewQ > globalMaxQ) {
         	globalMaxQ = globalNewQ;
-        	inputNetwork = foldingCommunities(inputNetwork);
-        	globalNewQ = optimizeModularity(inputNetwork);   
+        	//this.g.changeAttribute("globalNewQ", globalMaxQ);
+        	this.gp = foldingCommunities(this.gp);
+        	globalNewQ = optimizeModularity(this.gp);
         }
-       
-        printFinalGraph( finalNetwork ); 
+        printFinalGraph( this.gp ); 
 	}
 	
 	public void initialize( ) {
 		
+		this.gp.addAttribute("AlgorithmEvent", "");
+		this.gp.addAttribute("globalNewQ", "");
+		this.gp.addAttribute("NumCum", 0);
+		this.gp.addAttribute("delQ", 0.0 );
 		
-		Graph g = inputNetwork.getGraph();
-		
-	    for (Node node : g) {
+	    for (Node node : this.gp) {
 	    	Set<String> communityNodes = new HashSet<String>();
 	        communityNodes.add(node.getId());
 	        node.addAttribute("trueCommunityNodes", communityNodes);
@@ -115,45 +112,43 @@ public class LouvainAlgorithm {
 	    communitiesPerPhase = new ArrayList<Map<String, HyperCommunity>>();
 	    
 	    nminfo = new NormalizedMutualInformation("community","groundTruth");
-	    nminfo.init(g);
-	    
-	    g.display();
+	    nminfo.init(this.gp);
 	}
 	
-	public double optimizeModularity( Network network  ) {
+	public double optimizeModularity( Graph g  ) {
 		
-		
-		Graph g = network.getGraph();
 		
 		modularity = new Modularity("community", "weight");
-        modularity.init(g);
+       // modularity.init(g);
         
         Map<String, HyperCommunity> communities = new HashMap<String, HyperCommunity>();
 
         for (Node node : g) {
         	
-            //node.addAttribute("ui.label", node.getId()); 
             HyperCommunity community = new HyperCommunity();
 
             node.addAttribute("community", community.getAttribute());
             communities.put(community.getAttribute(), community);
         }
-
+        
+        System.out.println("Communty ids assigned");
         communitiesPerPhase.add(communities);
         int i = 0;
         do {
         	i++;
-            initialModularity = modularity.getMeasure();
+             //initialModularity = modularity.getMeasure();
+        	initialModularity = calculateModularity ( g );
+        	g.changeAttribute("globalNewQ", initialModularity);
+            System.out.println("initialModularity = " + initialModularity );
             for (Node node : g) {
-                maxModularity = -0.5;
-                newModularity = -0.5;
-                oldCommunity = node.getAttribute("community");
-                bestCommunity = oldCommunity;
+               maxModularity = Double.MIN_VALUE;
+               newModularity = -0.5;
+               oldCommunity = node.getAttribute("community");
+               bestCommunity = oldCommunity;
 
                 // For every neighbour node of the node, test if putting it to it's
                 // community, will increase the modularity.
                 neighbors = node.getNeighborNodeIterator();
-                
                 
                 while (neighbors.hasNext()) {
 
@@ -161,53 +156,163 @@ public class LouvainAlgorithm {
 
                     // Put the node in the neighbour's community.
                     node.changeAttribute("community", neighbour.getAttribute("community").toString());
-
-                    // Calculate new modularity
-                    newModularity = modularity.getMeasure();
+                 
                     
-                    System.out.println("Node ID :" + node.getId() + " Merged With Neighbor : " + neighbour.getId());
-                    System.out.println("New Modularity : " + newModularity);
-                    
+                    newModularity = calculateDeltaQ( node,neighbour);
+                        
+                        
                     if (newModularity > maxModularity) {
                         maxModularity = newModularity;
                         bestCommunity = neighbour.getAttribute("community").toString();
                     }
                 }
-                
-                System.out.println("Best community found : " + bestCommunity);
-                
+                  
                 if (node.getAttribute("community") != bestCommunity) {
                     node.changeAttribute("community", bestCommunity);
-                }       
-            }
-            deltaQ = modularity.getMeasure() - initialModularity;
-            
-            System.out.println("Iteration number : " + i );
-            System.out.println("DeltaQ  : " + deltaQ );
-            
+                }
+                
+            }  
+             deltaQ = calculateModularity( g ) - initialModularity; 
+             this.gp.changeAttribute("delQ", deltaQ);
+            System.out.println("deltaQ : " + deltaQ);
         } while (deltaQ > 0);
         
-        //System.out.println("NMI: " + nminfo.getMeasure());
-
-       //System.out.println("Modularity measure : " + modularity.getMeasure( ) );
-        return modularity.getMeasure();
+        return calculateModularity( g );
 	}
 	
-	 public Network foldingCommunities(Network network) {
+	public double getTotalEdgeWeight( Node n ) {
+		
+		double edgeWeight = 0.0;
+		
+		Collection<Edge> ed = n.getEdgeSet();
+		
+		
+		for( Edge e : ed )
+		{
+			edgeWeight = edgeWeight + (double)e.getAttribute("weight");
+		}
+		
+		return edgeWeight;
+	}
+	
+	public double getTotalEdgeWeight( Graph g ) {
+		return g.getEdgeCount();
+	}
+	
+	
+	public double calculateDeltaQ(Node i, Node j) {
+		
+		double sigmaIn;
+		Edge ed = i.getEdgeBetween(i);
+		if(ed !=null)
+		sigmaIn =(double)ed.getAttribute("weight");
+		else
+			sigmaIn =0;
+		
+		double sigmaTot = getTotalEdgeWeight(j) - sigmaIn;
+		double ki = getTotalEdgeWeight(i) - sigmaIn;
+		double kiIn = (double)i.getEdgeBetween(j).getAttribute("weight");
+		
+		double a = (sigmaIn + 2*kiIn)/(2*totalEdgeWeight);
+		double b = (sigmaTot + ki)*(sigmaTot+ki)/(4*totalEdgeWeight*totalEdgeWeight);
+		double c = (sigmaIn)/(2*totalEdgeWeight);
+		double d = (sigmaTot*sigmaTot)/(4*totalEdgeWeight*totalEdgeWeight);
+		double e = (ki*ki)/(4*totalEdgeWeight*totalEdgeWeight);
+		
+		double deltaQ = ((a-b))- ((c-d-e)); 
+		return deltaQ;
+	}
+	
+	
+	/*public double calculateModularity( Graph g ) {
+		
+		double modularity = 0.0;
+		for ( Iterator<Node> it = g.getNodeIterator(); it.hasNext();) {
+			Node nodei = it.next();
+			double weighti = getTotalEdgeWeight( nodei );
+			for ( Iterator<Node> it1 = g.getNodeIterator(); it1.hasNext();) {
+				Node nodej = it1.next();
+				if( !nodei.getId().equals(nodej.getId()) && nodei.getAttribute("community").toString().equals(nodej.getAttribute("community").toString())){
+					double aij = 0.0;
+					Edge ij = nodei.getEdgeToward(nodej);
+					if( ij != null )
+					{
+						aij = aij + (double)ij.getAttribute("weight"); 
+					}
+					modularity += (aij - (weighti*getTotalEdgeWeight(nodej)/(totalEdgeWeight))) ;
+				}
+			}
+		}
+		modularity = (modularity) / (2*totalEdgeWeight);
+		return modularity;
+	}*/
+	
+	/*public double calculateModularity( Graph g ) {
+			
+		double modularity = 0.0;
+		double count = 0;
+		for( Node nodei : g )
+		{
+			double weighti = getTotalEdgeWeight( nodei );
+			for( Node nodej : g )
+			{
+				if( !nodei.getId().equals(nodej.getId()) && nodei.getAttribute("community").toString().equals(nodej.getAttribute("community").toString())){
+					double aij = 0.0;
+					Edge ij = nodei.getEdgeToward(nodej);
+					if( ij != null )
+					{
+						aij = aij + (double)ij.getAttribute("weight"); 
+					}
+					modularity += (aij - (weighti*getTotalEdgeWeight(nodej)/(totalEdgeWeight))) ;
+				}
+			}
+			count ++;
+			System.out.println("Calculcated for node " + count);
+		}
+		
+		modularity = (modularity) / (2*totalEdgeWeight);
+		return modularity;
+	}*/
+	
+	public double calculateModularity( Graph g ) {
+		double modularity = 0.0;
+		double count = 0;
+		for( Node nodei : g )
+		{
+			double weighti = getTotalEdgeWeight( nodei );
+			
+			Iterator<Node> neigh = nodei.getNeighborNodeIterator();
+			while (neigh.hasNext())
+			{
+				Node nodej = neigh.next();
+				if( !nodei.getId().equals(nodej.getId()) && nodei.getAttribute("community").toString().equals(nodej.getAttribute("community").toString())){
+					double aij = 0.0;
+					Edge ij = nodei.getEdgeToward(nodej);
+					if( ij != null )
+					{
+						aij = aij + (double)ij.getAttribute("weight"); 
+					}
+					modularity += (aij - (weighti*getTotalEdgeWeight(nodej)/(totalEdgeWeight))) ;
+				}
+			}
+		}
+		modularity = (modularity) / (2*totalEdgeWeight);
+		
+		return modularity;
+	}
+	
+	 public Graph foldingCommunities(Graph  g) {
 
 	        // Group nodes by community and count the edge types. Knowing the number
 	        // of each edge type (inner and outer) is necessary in order to create
 	        // the folded graph.
-		 	
-		 	Graph g = network.getGraph();
 		 	
 	        Map<String, HyperCommunity> communities = communitiesPerPhase.get(communitiesPerPhase.size() - 1);
 	        ListMultimap<String, Node> multimap = ArrayListMultimap.create();
 	        HyperCommunity community;
 	        for (Node node : g) {
 	            multimap.put((String) node.getAttribute("community"), node);
-	            community = communities.get(node.getAttribute("community")); // Get the community object 
-	            // from the node's attribute.
+	            community = communities.get(node.getAttribute("community"));
 	            community.increaseNodesCount();  // increase the count of the community's nodes by 1.
 	            neighbors = node.getNeighborNodeIterator();
 	            while (neighbors.hasNext()) {
@@ -241,11 +346,16 @@ public class LouvainAlgorithm {
 	            communities.get(entry.getKey()).finilizeInnerEdgesWeightCount();
 	        }
 	        
-	        g.clear();
+	        
+	        this.gp.changeAttribute("AlgorithmEvent", "graphCleared");
+	        
 	        // Creation of the folded graph.
-	        g = new SingleGraph("communitiesPhase2");
-
-	        g.display();
+	        g =  new SingleGraph("communitiesPhase2");
+	        
+	       //  g.display();
+	      //  g.addSink(sink);
+	        System.out.println("Gonna Create New graph");
+	       
 	        String edgeIdentifierWayOne,
 	                edgeIdentifierWayTwo,
 	                edgeIdentifierSelfie;
@@ -293,76 +403,58 @@ public class LouvainAlgorithm {
 	                    communityEntry.getKey(),
 	                    communityEntry.getKey());
 	            edge.addAttribute("weight", Double.parseDouble(String.valueOf(innerEdgesWeight)));
-	        	
 	        	}
+	        System.out.println("Community Folding Complete");
 	        
-	        	//g.display();
-	        	
-	        return network;
-	    }
-	
-	 public void printFinalGraph(Network finalNetwork2) {
+	        this.gp.changeAttribute("NumCum", g.getNodeCount());
+	        
+	        return g;
+	 }
+	 
+	 public void printFinalGraph(Graph graph) {
 		 
 		 
-		 Graph finalGraph = finalNetwork2.getGraph();
+		 
 		 // Cleaning up the communities of the original graph
 	        // TO-DO: could be done by a function.
-	        for (Node node : finalGraph) {
-	            node.addAttribute("community", "");
+	        for (Node node : finalNetwork) {
+	            node.addAttribute("communityId", "");
 	            node.addAttribute("ui.style", "size: 20px;");
 	        }
 
-	        // Creating the communities count on the display screen.
-	        sm = new SpriteManager(finalGraph);
-	        communitiesCount = sm.addSprite("CC");
-	        communitiesCount.setPosition(Units.PX, 20, 20, 0);
-	        communitiesCount.setAttribute("ui.label",
-	                String.format("Communities: %d", this.inputNetwork.getGraph().getNodeCount()));
-	        communitiesCount.setAttribute("ui.style", "size: 0px; text-color: rgb(150,100,100); text-size: 20;");
+	        modularity.init(finalNetwork);
 
-	        finalGraph.display(true); // display the graph on the screen.
-	        modularity.init(finalGraph);
-
-	        // Creating the modularity count on the display screen.
-	        modularityCount = sm.addSprite("MC");
-	        modularityCount.setPosition(Units.PX, 20, 60, 0);
-	        modularityCount.setAttribute("ui.style", "size: 0px; text-color: rgb(150,100,100); text-size: 20;");
-	        
-	        nmiCount = sm.addSprite("NMIC");
-	        nmiCount.setPosition(Units.PX, 20, 100, 0);
-	        nmiCount.setAttribute("ui.style", "size: 0px; text-color: rgb(150,100,100); text-size: 20;");
 
 	        // Color every node of a community with the same random color.
 	        color = new Random();
-	        for (Node community : this.inputNetwork.getGraph()) {
+	        for (Node community : graph) {
 	            r = color.nextInt(255);
-	            g = color.nextInt(255);
+	            gr = color.nextInt(255);
 	            b = color.nextInt(255);
 	            Set<String> communityNodes = community.getAttribute("trueCommunityNodes");
 	            for (Iterator<String> node = communityNodes.iterator(); node.hasNext();) {
-	                Node n = finalGraph.getNode(node.next());
-	                n.addAttribute("community", community.getId());
-	                n.addAttribute("ui.style", "fill-color: rgb(" + r + "," + g + "," + b + "); size: 20px;");
-	                modularityCount.setAttribute("ui.label",
-	                        String.format("Modularity: %f", modularity.getMeasure()));
-	                nmiCount.setAttribute("ui.label",
-	                        String.format("NMI: %f", nminfo.getMeasure()));
-	                sleep();
+	                Node n = finalNetwork.getNode(node.next());
+	                n.addAttribute("ui.label", community.getId());
+	                n.addAttribute("finalColor", new int[]{r,gr,b});
 	            }
 	        }
 
 	        // If an edge connects nodes that belong to different communities, color
 	        // it gray.
-	        for (Iterator<? extends Edge> it = finalGraph.getEachEdge().iterator(); it.hasNext();) {
+	        for (Iterator<? extends Edge> it = finalNetwork.getEachEdge().iterator(); it.hasNext();) {
 	            Edge edge = it.next();
 	            if (!edge.getNode0().getAttribute("community").equals(edge.getNode1().getAttribute("community"))) {
-	                edge.addAttribute("ui.style", "fill-color: rgb(236,236,236);");
+	                edge.addAttribute("ui.color", "fill-color: rgb(236,236,236);");
 	            }
 	        }
+	      
+	        this.gp.changeAttribute("AlgorithmEvent", "algorithmEnded");
+	        System.out.println("Algorithm Ended");
+	       // finalNetwork.display();
 	    }
-	protected void sleep() {
+	protected void sleep(long time) {
         try {
-            Thread.sleep(100);
+            Thread.sleep(time);
         } catch (Exception e) {
         }
     }

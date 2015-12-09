@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,7 +19,7 @@ public class GirvanNewmanAlgorithm {
 	
 	private GraphStreamSenderSink sink;
 	
-	private Network inputNetwork;
+	private Graph inputGraph;
 	
 	private String inputFile;
 	
@@ -27,62 +28,78 @@ public class GirvanNewmanAlgorithm {
 		sink = new GraphStreamSenderSink( conn );
 		inputFile = file;
 		
-		inputNetwork = new Network(sink);
 		try {
-			inputNetwork.ConstructGraph(inputFile);
+			inputGraph = Network.ConstructGraph(inputFile, sink);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-	public void initialize( ) {
 		
-		Graph g = inputNetwork.getGraph();
-		//g.display();
+		int[] data = {0,0};
+		inputGraph.addAttribute("EdgeRemoved", data );
+		inputGraph.addAttribute("MaximumBetweeness", 0.0);
 	}
+	
 	public void runAlgorithm( int numCommunities ) {
-		
-		initialize( );
-		
-		Graph g = inputNetwork.getGraph();
 		
 		BetweennessCentrality bcb;
 		
-		try {
-			Thread.sleep(3000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		int edgeCount = inputGraph.getEdgeCount();
 		
-		
-		for ( int i=1 ; i <= numCommunities; i++) {
+		while ( inputGraph.getEdgeCount() > 0) {
 			
 			bcb = new BetweennessCentrality();
 	        bcb.setWeightAttributeName("weight");
-	        bcb.init(g);
+	        bcb.setWeighted();
+	        bcb.init(inputGraph);
 	        bcb.computeEdgeCentrality(true);
 	        bcb.compute();
 			
 	        double maxBetweeness = Double.MIN_VALUE;
-	        Edge maxBetweenessEdge = null;
+	        List<Edge> maxBetweenessEdges = new ArrayList<Edge>();
 	     
-	        for (Iterator<? extends Edge> it = g.getEachEdge().iterator(); it.hasNext();) {
+	        for (Iterator<? extends Edge> it = inputGraph.getEachEdge().iterator(); it.hasNext();) {
 	            Edge edge = it.next();
 	            
 	           double bc = bcb.centrality(edge);
 	           
-	           if( bc >= maxBetweeness)
+	           if( bc == maxBetweeness)
 	           {
 	        	   maxBetweeness = bc;
-	        	   maxBetweenessEdge = edge;
-	           }       
-	        } 
-	        g.removeEdge(maxBetweenessEdge);
-	        try {
-				Thread.sleep(3000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+	        	   maxBetweenessEdges.add(edge);  
+	           }
+	           else if  ( bc > maxBetweeness )
+	           {	
+	        	   maxBetweeness = bc;
+	        	   maxBetweenessEdges.clear();
+	        	   maxBetweenessEdges.add(edge);
+	           }
+	        }
+	        System.out.println("Max Betweeness : " + maxBetweeness);
+	        inputGraph.changeAttribute("MaximumBetweeness", maxBetweeness);
+	        sleep(2000);
+	        removeEdges( maxBetweenessEdges );
 		}
 	}
+	
+	protected void removeEdges( List<Edge> edgesToBeRemoved ) {
+		
+		for (Iterator<? extends Edge> it = edgesToBeRemoved.iterator(); it.hasNext();) {
+            Edge edge = it.next();
+            
+            int Node0 = Integer.parseInt(edge.getNode0().getId());
+            int Node1 = Integer.parseInt(edge.getNode1().getId());
+            int[] data = {Node0,Node1};
+            inputGraph.removeEdge(edge);
+            
+            inputGraph.changeAttribute("EdgeRemoved", data );
+		}
+	}
+	
+	protected void sleep(long time) {
+        try {
+            Thread.sleep(time);
+        } catch (Exception e) {
+        	e.printStackTrace();
+        }
+    }
 }
