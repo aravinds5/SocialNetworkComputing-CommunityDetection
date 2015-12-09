@@ -33,6 +33,8 @@ import org.graphstream.algorithm.Toolkit;
  */
 public class LouvainAlgorithm {
 	
+	private static WebSocket my_conn;
+	
 	private GraphStreamSenderSink sink;
 	
 	private String inputFile;
@@ -63,6 +65,7 @@ public class LouvainAlgorithm {
 	
 	public LouvainAlgorithm( WebSocket conn, String file) {
 		
+		my_conn = conn;
 		sink = new GraphStreamSenderSink( conn );
 		inputFile = file;
 		
@@ -77,29 +80,45 @@ public class LouvainAlgorithm {
 		System.out.println("Total Edge weight : " + totalEdgeWeight);
 	}
 	
+	public Map<String,HyperCommunity> getFinalCommunites()
+	{
+	  return communitiesPerPhase.get(communitiesPerPhase.size()-2);
+	}
+	
+	public Graph getFinalGraph()
+	{
+		return this.finalNetwork;
+	}
+	
+	private static void sendAlgEvent(WebSocket conn,String attribute,Object newValue )
+	{
+		JSONObject jsonObj = null;
+		try {
+		    jsonObj = new JSONObject().put("operation","graphAttributeChanged").
+		    			put(attribute,newValue);
+		} catch (JSONException e) {
+		    e.printStackTrace();
+		}
+		conn.send(jsonObj.toString());	
+	}
+	
 	public void runAlgorithm( ) {
-		
 		initialize( );
-		
 		globalNewQ = optimizeModularity(this.gp);
-		
-		this.gp.changeAttribute("globalNewQ", globalNewQ);
 		
 		finalNetwork = this.gp;
 
         while (globalNewQ > globalMaxQ) {
         	globalMaxQ = globalNewQ;
-        	//this.g.changeAttribute("globalNewQ", globalMaxQ);
         	this.gp = foldingCommunities(this.gp);
         	globalNewQ = optimizeModularity(this.gp);
         }
         printFinalGraph( this.gp ); 
 	}
-	
+
 	public void initialize( ) {
 		
 		this.gp.addAttribute("AlgorithmEvent", "");
-		this.gp.addAttribute("globalNewQ", "");
 		this.gp.addAttribute("NumCum", 0);
 		this.gp.addAttribute("delQ", 0.0 );
 		
@@ -138,7 +157,7 @@ public class LouvainAlgorithm {
         	i++;
              //initialModularity = modularity.getMeasure();
         	initialModularity = calculateModularity ( g );
-        	g.changeAttribute("globalNewQ", initialModularity);
+        	sendAlgEvent(my_conn,"globalNewQ", globalNewQ);
             System.out.println("initialModularity = " + initialModularity );
             for (Node node : g) {
                maxModularity = Double.MIN_VALUE;
@@ -160,7 +179,6 @@ public class LouvainAlgorithm {
                     
                     newModularity = calculateDeltaQ( node,neighbour);
                         
-                        
                     if (newModularity > maxModularity) {
                         maxModularity = newModularity;
                         bestCommunity = neighbour.getAttribute("community").toString();
@@ -173,7 +191,9 @@ public class LouvainAlgorithm {
                 
             }  
              deltaQ = calculateModularity( g ) - initialModularity; 
-             this.gp.changeAttribute("delQ", deltaQ);
+             //this.gp.changeAttribute("delQ", deltaQ);
+             sendAlgEvent(my_conn,"delQ", deltaQ);
+             
             System.out.println("deltaQ : " + deltaQ);
         } while (deltaQ > 0);
         
@@ -224,55 +244,7 @@ public class LouvainAlgorithm {
 	}
 	
 	
-	/*public double calculateModularity( Graph g ) {
-		
-		double modularity = 0.0;
-		for ( Iterator<Node> it = g.getNodeIterator(); it.hasNext();) {
-			Node nodei = it.next();
-			double weighti = getTotalEdgeWeight( nodei );
-			for ( Iterator<Node> it1 = g.getNodeIterator(); it1.hasNext();) {
-				Node nodej = it1.next();
-				if( !nodei.getId().equals(nodej.getId()) && nodei.getAttribute("community").toString().equals(nodej.getAttribute("community").toString())){
-					double aij = 0.0;
-					Edge ij = nodei.getEdgeToward(nodej);
-					if( ij != null )
-					{
-						aij = aij + (double)ij.getAttribute("weight"); 
-					}
-					modularity += (aij - (weighti*getTotalEdgeWeight(nodej)/(totalEdgeWeight))) ;
-				}
-			}
-		}
-		modularity = (modularity) / (2*totalEdgeWeight);
-		return modularity;
-	}*/
 	
-	/*public double calculateModularity( Graph g ) {
-			
-		double modularity = 0.0;
-		double count = 0;
-		for( Node nodei : g )
-		{
-			double weighti = getTotalEdgeWeight( nodei );
-			for( Node nodej : g )
-			{
-				if( !nodei.getId().equals(nodej.getId()) && nodei.getAttribute("community").toString().equals(nodej.getAttribute("community").toString())){
-					double aij = 0.0;
-					Edge ij = nodei.getEdgeToward(nodej);
-					if( ij != null )
-					{
-						aij = aij + (double)ij.getAttribute("weight"); 
-					}
-					modularity += (aij - (weighti*getTotalEdgeWeight(nodej)/(totalEdgeWeight))) ;
-				}
-			}
-			count ++;
-			System.out.println("Calculcated for node " + count);
-		}
-		
-		modularity = (modularity) / (2*totalEdgeWeight);
-		return modularity;
-	}*/
 	
 	public double calculateModularity( Graph g ) {
 		double modularity = 0.0;
@@ -309,7 +281,7 @@ public class LouvainAlgorithm {
 		 	
 	        Map<String, HyperCommunity> communities = communitiesPerPhase.get(communitiesPerPhase.size() - 1);
 	        ListMultimap<String, Node> multimap = ArrayListMultimap.create();
-	        HyperCommunity community;
+	        HyperCommunity community = new HyperCommunity();
 	        for (Node node : g) {
 	            multimap.put((String) node.getAttribute("community"), node);
 	            community = communities.get(node.getAttribute("community"));
@@ -347,13 +319,15 @@ public class LouvainAlgorithm {
 	        }
 	        
 	        
-	        this.gp.changeAttribute("AlgorithmEvent", "graphCleared");
+	       // this.gp.changeAttribute("AlgorithmEvent", "graphCleared");
+	        
+	       sendAlgEvent(my_conn,"AlgorithmEvent", "graphCleared");
 	        
 	        // Creation of the folded graph.
 	        g =  new SingleGraph("communitiesPhase2");
 	        
 	       //  g.display();
-	      //  g.addSink(sink);
+	        g.addSink(sink);
 	        System.out.println("Gonna Create New graph");
 	       
 	        String edgeIdentifierWayOne,
@@ -365,6 +339,7 @@ public class LouvainAlgorithm {
 	                                                                // don't add the same edge twice.
 	        Edge edge;
 	        double innerEdgesWeight;
+	        
 
 	        // For every community
 	        for (Iterator<Entry<String, HyperCommunity>> it = communities.entrySet().iterator(); it.hasNext();) {
@@ -404,16 +379,13 @@ public class LouvainAlgorithm {
 	                    communityEntry.getKey());
 	            edge.addAttribute("weight", Double.parseDouble(String.valueOf(innerEdgesWeight)));
 	        	}
-	        System.out.println("Community Folding Complete");
 	        
-	        this.gp.changeAttribute("NumCum", g.getNodeCount());
+	        System.out.println("Community Folding Complete");
 	        
 	        return g;
 	 }
 	 
 	 public void printFinalGraph(Graph graph) {
-		 
-		 
 		 
 		 // Cleaning up the communities of the original graph
 	        // TO-DO: could be done by a function.
@@ -423,7 +395,6 @@ public class LouvainAlgorithm {
 	        }
 
 	        modularity.init(finalNetwork);
-
 
 	        // Color every node of a community with the same random color.
 	        color = new Random();
@@ -447,10 +418,12 @@ public class LouvainAlgorithm {
 	                edge.addAttribute("ui.color", "fill-color: rgb(236,236,236);");
 	            }
 	        }
+	       
+	        sendAlgEvent(my_conn,"NumCum", communitiesPerPhase.get(communitiesPerPhase.size()-1).size());
 	      
 	        this.gp.changeAttribute("AlgorithmEvent", "algorithmEnded");
+	        
 	        System.out.println("Algorithm Ended");
-	       // finalNetwork.display();
 	    }
 	protected void sleep(long time) {
         try {
