@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>GirvanNewman Algorithm</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- MetisMenu CSS -->
+    <link href="../bower_components/metisMenu/dist/metisMenu.min.css" rel="stylesheet">
+
+    <!-- Timeline CSS -->
+    <link href="../dist/css/timeline.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="../dist/css/sb-admin-2.css" rel="stylesheet">
+
+    <!-- Morris Charts CSS -->
+    <link href="../bower_components/morrisjs/morris.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="../bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="../bower_components/vis/dist/vis.css" rel="stylesheet" type="text/css" />
+    <style type="text/css">
+        #mynetwork {
+            width: 950px;
+            height: 700px;
+            /*border: 1px solid lightgray;*/
+        }
+    </style>
+</head>
+
+<body>
+<div id="wrapper">
+
+            <!-- Navigation -->
+        <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="index.html">Graph Visualization</a>
+            </div>
+           <!-- /.navbar-header -->
+            <div class="navbar-default sidebar" role="navigation">
+                <div class="sidebar-nav navbar-collapse">
+                    <ul class="nav" id="side-menu">
+                    <li class="sidebar-search">
+                            <div class="input-group custom-search-form">
+                                <input type="text" class="form-control" placeholder="Search...">
+                                <span class="input-group-btn">
+                                <button class="btn btn-default" type="button">
+                                    <i class="fa fa-search"></i>
+                                </button>
+                            </span>
+                            </div>
+                            <!-- /input-group -->
+                        </li>
+                        <li>
+                            <a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Dashboard</a>
+                        </li>
+                        <li>
+                            <a href="#"><i class="fa fa-bar-chart-o fa-fw"></i> Upload your Data</a>
+                            <input id="uploadFile" placeholder="Choose File" disabled="disabled" />
+                                    <div class="fileUpload btn btn-xs btn-primary">
+                                                <span>Upload</span>
+                                 <input class="upload" type="file" id="filename" onchange="sendFile()"/> 
+                                    </div>
+                        </li>
+                   </ul>
+                </div>
+                <!-- /.sidebar-collapse -->
+            </div>
+            <!-- /.navbar-static-side -->
+        </nav>
+
+        <div id="page-wrapper">
+          <!-- <div class="row">
+                <div class="col-lg-12">
+                    <h1 class="page-header">Display Area </h1>
+                </div>
+                <!--/.col-lg-12 >
+            </div>   -->
+            <!-- /.row -->
+            
+    <div class="row">
+                <div class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bar-chart-o fa-fw"></i> ----Graph----
+                            <div class="pull-right">
+                            <div class="pull-right">
+       <button type="button"  onclick="start()" class="btn btn-primary btn-xs active ">Start</button>
+       <button type="button"  onclick="pause()" class="btn btn-primary btn-xs active ">Pause</button>
+        <button type="button" onclick="resume()"class="btn btn-primary btn-xs active ">Resume</button>                      
+     </div>
+
+                                <!--<div class="btn-group">
+                                    <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
+                                        Actions
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu pull-right" onclick="startStop()" id="button1"role="menu">
+                                        <li><button type= "button" class ="btn btn-default btn-xs"id="startalgo" onclick="startStop()">Start</button>
+                                        </li>
+                                        <li><button id="pausealgo"  onclick="startStop()">Pause</button>
+                                        </li>
+                                        <li><button id="resumealgo" onclick="startStop()">Stop</button>
+                                        </li>-->
+                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /.panel-heading -->
+
+                        <div class="panel-body" id="mynetwork">
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                    <div class ="row">
+                 <div class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <i class="fa fa-bell fa-fw"></i> Statistics Panel
+                            
+                        </div> 
+                        <div class="panel-body" id="stat">
+                    <div class="row">
+                        <div class="fa col-lg-3">
+                            </div>
+                    </div> 
+                    </div>     
+
+                            </div>
+                    </div> 
+                    </div>        
+                </div>
+        </div>              
+
+        <!-- /#page-wrapper -->
+
+    </div>
+    <!-- /#wrapper -->
+    <!--iframe sandbox="allow-scripts allow-forms allow-same-origin" src="forced3.html" marginwidth="0" marginheight="0" scrolling="no"></iframe-->
+
+    <!-- jQuery -->
+    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <!-- Metis Menu Plugin JavaScript -->
+    <script src="../bower_components/metisMenu/dist/metisMenu.min.js"></script>
+
+    <!-- Morris Charts JavaScript -->
+    <script src="../bower_components/raphael/raphael-min.js"></script>
+    <script src="../bower_components/morrisjs/morris.min.js"></script>
+    <script src="../js/morris-data.js"></script>
+
+    <!-- Custom Theme JavaScript -->
+    <script src="../dist/js/sb-admin-2.js"></script>
+    <script src="../bower_components/vivagraph/VivaGraphJS-master/dist/vivagraph.js"></script>
+    <script type="text/javascript">
+        function addNode(nodeId) {
+            graph.addNode(nodeId);
+        }
+
+        function addEdge(edgeId,sourceId,destinationId) {
+            graph.addLink(sourceId,destinationId);
+        }
+
+
+        function removeEdge ( nodes ) {
+
+           var link1 = graph.getLink( nodes[0].toString(),nodes[1].toString() );
+
+           if( link1 == null )
+           {
+            var link1 = graph.getLink( nodes[1].toString() , nodes[0].toString() );
+           }
+           graph.removeLink(link1);
+        }
+
+        function clearGraph( ) {
+        }
+
+
+        function sendFile( ) {
+            var fileObject = document.getElementById('filename').files[0];
+
+            var newObject  = {
+        'lastModified'     : fileObject.lastModified,
+        'lastModifiedDate' : fileObject.lastModifiedDate,
+        'name'             : fileObject.name,
+        'size'             : fileObject.size,
+        'type'             : fileObject.type
+        }; 
+
+            //socket.send( newObject );
+        }
+
+        function componentToHex(c) 
+        {
+            var hex = c.toString(16);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+
+        function fromRGBto32(rgbArr) {
+  			return rgbArr.reduce(function(s, v) {
+    		return s + ('0' + v.toString(16)).slice(-2);
+  		},'') + 'ff'
+		}
+
+        function colorNode( nodeId , rgb ) {
+            var nodeUI = graphics.getNodeUI(nodeId);
+            nodeUI.color = parseInt(fromRGBto32(rgb),16);
+        }
+
+        function start( ) {
+            socket.send("StartGirvanNewman");
+        }
+
+        function stop( ) {
+            socket.send("Pause");
+        }
+
+        function resume( ) {
+
+            socket.send("Resume");
+        }
+
+    var graph = Viva.Graph.graph();
+    var graphics = Viva.Graph.View.webglGraphics();
+    var container = document.getElementById('mynetwork');
+    var stat_container = document.getElementById ( 'stat' );
+    var renderer = Viva.Graph.View.renderer(graph,
+    {
+        graphics : graphics,
+        container  : container
+    });
+    renderer.run();
+
+    var socket = new WebSocket('ws://localhost:8887');
+    socket.onopen = function(){
+    console.log("Connection established, handle with function");
+    };
+
+    socket.onmessage = function(evt){
+      
+    var obj = JSON.parse(evt.data);
+
+    if(obj.operation == "nodeAdded")
+    {
+        addNode( obj.nodeId );
+    }
+    if(obj.operation == "edgeAdded")
+    {
+        addEdge(obj.edgeId,obj.fromNodeId,obj.toNodeId);
+    }
+
+    if(obj.operation == "NodeAttributeAdded")
+    {   
+        if(obj.finalColor !=null ) {
+            colorNode(obj.nodeId,obj.finalColor);
+        }
+    }
+
+    if(obj.operation == "graphAttributeChanged")
+    {
+        if(obj.AlgorithmEvent == "graphCleared")
+        {
+            clearGraph( );
+        }
+        else if( obj.AlgorithmEvent == "algorithmEnded")
+        {
+            renderer.rerender();
+        }
+        else if ( obj.EdgeRemoved !=null ) {
+            removeEdge( obj.EdgeRemoved );
+        }
+
+        if( obj.MaximumBetweeness !=null ) {
+            var p = document.createElement("P");
+
+            var content = document.createTextNode("MaximumBetweeness : " + obj.MaximumBetweeness);
+
+            p.appendChild(content);
+            stat_container.appendChild(p);
+        }
+    }
+  }
+</script>
+
+</body>
+
+</html>
