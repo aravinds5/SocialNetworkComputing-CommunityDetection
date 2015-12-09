@@ -321,13 +321,13 @@ public class LouvainAlgorithm {
 	        
 	       // this.gp.changeAttribute("AlgorithmEvent", "graphCleared");
 	        
-	       sendAlgEvent(my_conn,"AlgorithmEvent", "graphCleared");
+	       //sendAlgEvent(my_conn,"AlgorithmEvent", "graphCleared");
 	        
 	        // Creation of the folded graph.
 	        g =  new SingleGraph("communitiesPhase2");
 	        
 	       //  g.display();
-	        g.addSink(sink);
+	       // g.addSink(sink);
 	        System.out.println("Gonna Create New graph");
 	       
 	        String edgeIdentifierWayOne,
