@@ -1,5 +1,5 @@
-## SocialNetworkComputing-CommunityDetection
-#Web Application to visualize community detection algorithms
+# SocialNetworkComputing-CommunityDetection
+##Web Application to visualize community detection algorithms
 
 ##Here are the links to our results :
 
